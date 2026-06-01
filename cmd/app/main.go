@@ -1,10 +1,13 @@
 package main
 
 import (
-	"io"
 	"log"
 	"log/slog"
 	"net/http"
+	"os"
+	"time"
+
+	"github.com/Pratham-M-J/microservices/handler"
 )
 
 const port = ":8080"
@@ -16,28 +19,27 @@ func main() {
 		w.Write([]byte("Hello world"))
 	})
 
-	http.HandleFunc("GET /school", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("Hello I'm in school")
+	l := log.New(os.Stdout, "product-api", log.LstdFlags)
+	sm := http.NewServeMux()
 
-		d, err := io.ReadAll(r.Body)
-		if err != nil {
-			slog.Error("error reading body", "error", err)
-			http.Error(w, "failed to read body", http.StatusBadRequest)
-			return
-		}
+	hh := handler.NewHello(l)
+	gh := handler.NewGoodbye(l)
+	oh := handler.NewOmg(l)
 
-		log.Printf("Data: %s", d)
-
-		w.Write(d)
-	})
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("Pratham is cool")
-		w.Write([]byte("Pratham is cool"))
-	})
+	sm.Handle("/hello", hh)
+	sm.Handle("/goodbye", gh)
+	sm.Handle("/omg", oh)
 
 	slog.Info("server started", "port", port)
 
-	err := http.ListenAndServe(port, nil)
+	s := &http.Server{ //it's a struct in Go - https://pkg.go.dev/net/http#Server
+		Addr:         port,
+		Handler:      sm,
+		IdleTimeout:  120 * time.Second,
+		ReadTimeout:  1 * time.Second,
+		WriteTimeout: 1 * time.Second,
+	}
+	err := s.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)
 	}
