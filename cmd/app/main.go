@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/Pratham-M-J/microservices/handler"
@@ -19,10 +22,10 @@ func main() {
 		w.Write([]byte("Hello world"))
 	})
 
-	l := log.New(os.Stdout, "product-api", log.LstdFlags)
-	sm := http.NewServeMux()
+	l := log.New(os.Stdout, "product-api", log.LstdFlags) //logger
+	sm := http.NewServeMux()                              //router
 
-	hh := handler.NewHello(l)
+	hh := handler.NewHello(l) //handlers
 	gh := handler.NewGoodbye(l)
 	oh := handler.NewOmg(l)
 
@@ -39,8 +42,36 @@ func main() {
 		ReadTimeout:  1 * time.Second,
 		WriteTimeout: 1 * time.Second,
 	}
-	err := s.ListenAndServe()
+
+	done := make(chan os.Signal, 1) // channel waits for shutdown signal
+
+	signal.Notify(
+		done,
+		os.Interrupt,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
+
+	go func() {
+		err := s.ListenAndServe()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	<-done // block until signal received
+
+	ctx, cancel := context.WithTimeout(
+		context.Background(),
+		5*time.Second,
+	)
+
+	defer cancel()
+
+	err := s.Shutdown(ctx)
+
 	if err != nil {
+		slog.Error("Failed to shutdown the server")
 		log.Fatal(err)
 	}
 }
