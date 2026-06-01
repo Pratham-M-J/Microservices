@@ -17,21 +17,12 @@ const port = ":8080"
 
 func main() {
 
-	http.HandleFunc("GET /home", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("Hello world")
-		w.Write([]byte("Hello world"))
-	})
-
 	l := log.New(os.Stdout, "product-api", log.LstdFlags) //logger
 	sm := http.NewServeMux()                              //router
 
-	hh := handler.NewHello(l) //handlers
-	gh := handler.NewGoodbye(l)
-	oh := handler.NewOmg(l)
+	ph := handler.NewProducts(l)
 
-	sm.Handle("/hello", hh)
-	sm.Handle("/goodbye", gh)
-	sm.Handle("/omg", oh)
+	sm.Handle("/products", ph)
 
 	slog.Info("server started", "port", port)
 
@@ -59,8 +50,9 @@ func main() {
 		}
 	}()
 
-	<-done // block until signal received
+	sig := <-done // block until signal received
 
+	l.Println("Received terminate, graceful shutdown", sig)
 	ctx, cancel := context.WithTimeout(
 		context.Background(),
 		5*time.Second,
