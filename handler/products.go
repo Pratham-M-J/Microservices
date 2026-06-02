@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 
@@ -17,12 +16,20 @@ func NewProducts(l *log.Logger) *Products {
 }
 
 func (p *Products) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		p.getProducts(w, r)
+		return
+	}
+	w.WriteHeader(http.StatusMethodNotAllowed)
+}
 
+func (p *Products) getProducts(w http.ResponseWriter, r *http.Request) {
 	p.l.Println("Handle PUT Products")
 	w.Header().Set("Content-Type", "application/json")
-	err := json.NewEncoder(w).Encode(types.ProductList)
+	lp := types.GetProducts()
+	err := lp.ToJSON(w)
 	if err != nil {
 		http.Error(w, "Unable to marshal JSON", http.StatusInternalServerError)
+		return
 	}
-
 }

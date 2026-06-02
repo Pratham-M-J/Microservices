@@ -1,19 +1,25 @@
 package types
 
-import "time"
+import (
+	"encoding/json"
+	"io"
+	"time"
+)
 
+// Struct tags define how a struct field maps to JSON keys during encoding and decoding.
+// Struct tags tell Go which JSON key corresponds to each struct field.
 type Product struct {
-	ID          int
-	Name        string
-	Description string
-	Price       float32
-	SKU         string
-	CreatedOn   string
-	UpdatedOn   string
-	DeletedOn   string
+	ID          int     `json:"id"`
+	Name        string  `json:"name`
+	Description string  `json:"description`
+	Price       float32 `json:"price"`
+	SKU         string  `json:"sku"`
+	CreatedOn   string  `json:"-"`
+	UpdatedOn   string  `json:"-"` //ignores this field from the output
+	DeletedOn   string  `json:"-"`
 }
 
-var ProductList = []*Product{
+var productList = []*Product{
 	&Product{
 		ID:          1,
 		Name:        "Latte",
@@ -50,4 +56,16 @@ var ProductList = []*Product{
 		CreatedOn:   time.Now().UTC().String(),
 		UpdatedOn:   time.Now().UTC().String(),
 	},
+}
+
+// this is done, just to abstract the functionalities and handle the encoding here and not in the handler
+type Products []*Product
+
+func (p *Products) ToJSON(w io.Writer) error {
+	e := json.NewEncoder(w)
+	return e.Encode(p)
+}
+
+func GetProducts() Products {
+	return productList
 }
