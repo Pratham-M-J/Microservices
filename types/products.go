@@ -90,6 +90,7 @@ func UpdateProduct(id int, p *Product) {
 		return
 	}
 	productList[pos] = p
+	productList[pos].ID = id
 }
 
 func findProduct(id int) (*Product, int) {
