@@ -69,3 +69,34 @@ func (p *Products) ToJSON(w io.Writer) error {
 func GetProducts() Products {
 	return productList
 }
+
+func (p *Product) FromJSON(r io.Reader) error {
+	e := json.NewDecoder(r)
+	return e.Decode(p)
+}
+func AddProduct(p *Product) {
+	p.ID = getNextID()
+	productList = append(productList, p)
+}
+
+func getNextID() int {
+	lp := productList[len(productList)-1]
+	return lp.ID + 1
+}
+
+func UpdateProduct(id int, p *Product) {
+	_, pos := findProduct(id)
+	if pos == -1 {
+		return
+	}
+	productList[pos] = p
+}
+
+func findProduct(id int) (*Product, int) {
+	for i, p := range productList {
+		if p.ID == id {
+			return p, i
+		}
+	}
+	return nil, -1
+}

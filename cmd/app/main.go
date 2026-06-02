@@ -23,6 +23,7 @@ func main() {
 	ph := handler.NewProducts(l)
 
 	sm.Handle("/products", ph)
+	sm.Handle("/products/", ph)
 
 	slog.Info("server started", "port", port)
 
