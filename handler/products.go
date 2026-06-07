@@ -72,6 +72,14 @@ func (p *Products) addProduct(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Unable to unmarshal JSON", http.StatusBadRequest)
 	}
+
+	//validate the product data
+	err = prod.Validate()
+	if err != nil {
+		http.Error(w, "Unable to validate product data", http.StatusBadRequest)
+		return
+	}
+
 	p.l.Printf("Prod: %v", prod)
 	types.AddProduct(prod)
 }
@@ -83,6 +91,12 @@ func (p *Products) updateProducts(id int, w http.ResponseWriter, r *http.Request
 	err := prod.FromJSON(r.Body)
 	if err != nil {
 		http.Error(w, "Unable to unmarshal JSON", http.StatusBadRequest)
+		return
+	}
+	//validate the product data
+	err = prod.Validate()
+	if err != nil {
+		http.Error(w, "Unable to validate product data", http.StatusBadRequest)
 		return
 	}
 	types.UpdateProduct(id, prod)

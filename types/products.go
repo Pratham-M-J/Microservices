@@ -3,17 +3,20 @@ package types
 import (
 	"encoding/json"
 	"io"
+	"regexp"
 	"time"
+
+	"github.com/go-playground/validator/v10"
 )
 
 // Struct tags define how a struct field maps to JSON keys during encoding and decoding.
 // Struct tags tell Go which JSON key corresponds to each struct field.
 type Product struct {
 	ID          int     `json:"id"`
-	Name        string  `json:"name`
-	Description string  `json:"description`
-	Price       float32 `json:"price"`
-	SKU         string  `json:"sku"`
+	Name        string  `json:"name" validate:"required"` //this is a validation tag, it tells the validator that this field is required
+	Description string  `json:"description" validate:"required"`
+	Price       float32 `json:"price" validate:"required,gt=0"` //this is a validation tag, it tells the validator that this field must be greater than 0
+	SKU         string  `json:"sku" validate:"required,sku"`    //this is a validation tag, it tells the validator that this field is required and must match the custom validation function "sku"
 	CreatedOn   string  `json:"-"`
 	UpdatedOn   string  `json:"-"` //ignores this field from the output
 	DeletedOn   string  `json:"-"`
@@ -56,6 +59,22 @@ var productList = []*Product{
 		CreatedOn:   time.Now().UTC().String(),
 		UpdatedOn:   time.Now().UTC().String(),
 	},
+}
+
+func (p *Product) Validate() error {
+	validate := validator.New()
+	validate.RegisterValidation("sku", validateSKU) //this is a custom validation function, it tells the validator that the "sku" field must match the "validateSKU" function
+	return validate.Struct(p)
+
+}
+
+func validateSKU(fl validator.FieldLevel) bool {
+	//sku is of format abc-def-ghi
+	re := regexp.MustCompile(`[a-z]+-[a-z]+-[a-z]+`)
+	sku := fl.Field().String()
+
+	matches := re.FindAllString(sku, -1)
+	return len(matches) == 1
 }
 
 // this is done, just to abstract the functionalities and handle the encoding here and not in the handler
