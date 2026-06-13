@@ -15,7 +15,7 @@ import (
 
 const port = ":8008"
 
-func main() {
+func main( {
 
 	l := log.New(os.Stdout, "product-api", log.LstdFlags) //logger
 	sm := http.NewServeMux()                              //router
