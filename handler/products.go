@@ -1,3 +1,18 @@
+//Package classification of product API
+//
+//Documentation for Product API
+//
+//	Schemes: http
+//	BasePath: /
+//	Version: 1.0.0
+//
+// Consumes:
+// - application/json
+//
+// Produces:
+// - application/json
+// swagger:meta
+
 package handler
 
 import (
@@ -48,10 +63,18 @@ func (p *Products) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		p.l.Println("got id", id)
 		p.updateProducts(id, w, r)
+		return
 	}
 	w.WriteHeader(http.StatusMethodNotAllowed)
 }
 
+// swagger:route GET /products products listProducts
+//
+// Returns all products.
+//
+// responses:
+//
+//	200: productsResponse
 func (p *Products) getProducts(w http.ResponseWriter, r *http.Request) {
 	p.l.Println("Handle GET Products")
 	w.Header().Set("Content-Type", "application/json")

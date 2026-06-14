@@ -1,0 +1,12 @@
+info: {}
+paths:
+    /products:
+        get:
+            operationId: listProducts
+            responses:
+                "200":
+                    $ref: '#/responses/productsResponse'
+            summary: Returns all products.
+            tags:
+                - products
+swagger: "2.0"
