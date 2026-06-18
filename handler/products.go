@@ -16,12 +16,13 @@
 package handler
 
 import (
+	"context"
 	"log"
 	"net/http"
-	"regexp"
 	"strconv"
 
 	"github.com/Pratham-M-J/microservices/types"
+	"github.com/gorilla/mux"
 )
 
 type Products struct {
@@ -32,42 +33,6 @@ func NewProducts(l *log.Logger) *Products {
 	return &Products{l}
 }
 
-func (p *Products) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		p.getProducts(w, r)
-		return
-	}
-	if r.Method == http.MethodPost {
-		p.addProduct(w, r)
-		return
-	}
-	if r.Method == http.MethodPut {
-		//expect the id in the uri
-		reg := regexp.MustCompile(`/([0-9]+)`)
-		g := reg.FindAllStringSubmatch(r.URL.Path, -1)
-
-		if len(g) != 1 {
-			http.Error(w, "Invalid URI - more than one id", http.StatusBadRequest)
-			return
-		}
-		if len(g[0]) != 2 {
-			http.Error(w, "Invalid URI - more than one id", http.StatusBadRequest)
-			return
-		}
-		idString := g[0][1]
-		id, err := strconv.Atoi(idString)
-		if err != nil {
-			http.Error(w, "Invalid URI - unable to convert to an integer", http.StatusBadRequest)
-			return
-		}
-
-		p.l.Println("got id", id)
-		p.updateProducts(id, w, r)
-		return
-	}
-	w.WriteHeader(http.StatusMethodNotAllowed)
-}
-
 // swagger:route GET /products products listProducts
 //
 // Returns all products.
@@ -75,7 +40,7 @@ func (p *Products) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // responses:
 //
 //	200: productsResponse
-func (p *Products) getProducts(w http.ResponseWriter, r *http.Request) {
+func (p *Products) GetProducts(w http.ResponseWriter, r *http.Request) {
 	p.l.Println("Handle GET Products")
 	w.Header().Set("Content-Type", "application/json")
 	lp := types.GetProducts()
@@ -86,18 +51,14 @@ func (p *Products) getProducts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (p *Products) addProduct(w http.ResponseWriter, r *http.Request) {
+func (p *Products) AddProduct(w http.ResponseWriter, r *http.Request) {
 	p.l.Println("Handle POST Products")
 	w.Header().Set("Content-Type", "application/json")
 
-	prod := &types.Product{}
-	err := prod.FromJSON(r.Body)
-	if err != nil {
-		http.Error(w, "Unable to unmarshal JSON", http.StatusBadRequest)
-	}
+	prod := r.Context().Value(KeyProduct{}).(*types.Product) //retrieving the product data from the context, which was set in the middleware
 
 	//validate the product data
-	err = prod.Validate()
+	err := prod.Validate()
 	if err != nil {
 		http.Error(w, "Unable to validate product data", http.StatusBadRequest)
 		return
@@ -107,15 +68,18 @@ func (p *Products) addProduct(w http.ResponseWriter, r *http.Request) {
 	types.AddProduct(prod)
 }
 
-func (p *Products) updateProducts(id int, w http.ResponseWriter, r *http.Request) {
-	p.l.Println("Handle POST Products")
-	w.Header().Set("Content-Type", "application/json")
-	prod := &types.Product{}
-	err := prod.FromJSON(r.Body)
+func (p *Products) UpdateProduct(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r) //mux.Vars() is a function from the Gorilla Mux package that extracts variables from the URL path of an HTTP request. It returns a map of variable names to their corresponding values.
+	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Unable to unmarshal JSON", http.StatusBadRequest)
+		http.Error(w, "Invalid product ID", http.StatusBadRequest)
 		return
 	}
+
+	p.l.Println("Handle PUT Products")
+	prod := r.Context().Value(KeyProduct{}).(*types.Product) //retrieving the product data from the context, which was set in the middleware
+
+	w.Header().Set("Content-Type", "application/json")
 	//validate the product data
 	err = prod.Validate()
 	if err != nil {
@@ -123,4 +87,27 @@ func (p *Products) updateProducts(id int, w http.ResponseWriter, r *http.Request
 		return
 	}
 	types.UpdateProduct(id, prod)
+}
+
+type KeyProduct struct{}
+
+func (p *Products) MiddlewareProductValidation(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		prod := &types.Product{}
+
+		err := prod.FromJSON(r.Body)
+		if err != nil {
+			http.Error(w, "Unable to unmarshal JSON", http.StatusBadRequest)
+			return
+		}
+
+		ctx := context.WithValue(
+			r.Context(),
+			KeyProduct{},
+			prod,
+		)
+		req := r.WithContext(ctx)
+
+		next.ServeHTTP(w, req)
+	})
 }

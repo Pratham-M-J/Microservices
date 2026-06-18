@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Pratham-M-J/microservices/handler"
+	"github.com/gorilla/mux"
 )
 
 const port = ":8000"
@@ -18,14 +19,23 @@ const port = ":8000"
 func main() {
 
 	l := log.New(os.Stdout, "product-api", log.LstdFlags) //logger
-	sm := http.NewServeMux()                              //router
+	sm := mux.NewRouter()                                 //router
 
 	ph := handler.NewProducts(l)
 
-	sm.Handle("/products", ph)
-	sm.Handle("/products/", ph)
+	getRouter := sm.Methods(http.MethodGet).Subrouter() //subrouter for GET requests
+	getRouter.HandleFunc("/products", ph.GetProducts)   //handle GET requests to /products
+	//sm.Handle("/products", ph)
+	// sm.Handle("/products/", ph)
 
+	putRouter := sm.Methods(http.MethodPut).Subrouter()
+	putRouter.HandleFunc("/products/{id:[0-9]+}", ph.UpdateProduct)
+	putRouter.Use(ph.MiddlewareProductValidation) //middleware for validating product data in PUT requests
 	slog.Info("server started", "port", port)
+
+	postRouter := sm.Methods(http.MethodPost).Subrouter()
+	postRouter.HandleFunc("/products", ph.AddProduct)
+	postRouter.Use(ph.MiddlewareProductValidation) //middleware for validating product data in POST requests
 
 	s := &http.Server{ //it's a struct in Go - https://pkg.go.dev/net/http#Server
 		Addr:         port,
